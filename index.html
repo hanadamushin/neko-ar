@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fbf6ee" />
+  <title>NekoAR</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- ===== ホーム画面 ===== -->
+  <main id="home" class="screen active">
+    <header class="app-header">
+      <div class="brand"><span class="logo" aria-hidden="true">🐾</span>NekoAR</div>
+      <input id="cat-name" class="name-input" maxlength="16" aria-label="猫の名前" />
+    </header>
+
+    <section class="stage">
+      <div id="preview-host" class="preview-host"></div>
+      <div class="stage-chip" id="appearance-chip">見た目: デフォルト</div>
+    </section>
+
+    <section class="launch">
+      <button id="btn-ar" class="btn primary big" disabled>AR対応を確認中…</button>
+      <button id="btn-demo" class="btn big">デモルームで試す</button>
+      <p id="ar-note" class="note"></p>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="look" role="tab">見た目</button>
+      <button class="tab" data-tab="voice" role="tab">鳴き声</button>
+      <button class="tab" data-tab="settings" role="tab">設定</button>
+    </nav>
+
+    <!-- 見た目 -->
+    <section class="panel active" id="tab-look">
+      <div class="card">
+        <h2>写真・動画から見た目を学習</h2>
+        <p class="hint">猫が大きく写った写真を数枚（角度違いがおすすめ）選んでください。解析はすべて端末内で行われます。</p>
+        <div class="row">
+          <label class="btn file">写真を選ぶ<input id="in-photos" type="file" accept="image/*" multiple hidden /></label>
+          <label class="btn file">動画から学習<input id="in-video-look" type="file" accept="video/*" hidden /></label>
+        </div>
+        <div id="look-progress" class="progress" hidden><div class="bar"></div><span class="label"></span></div>
+        <div id="look-thumbs" class="thumbs"></div>
+        <div id="look-result" class="result" hidden></div>
+        <div class="row">
+          <button id="btn-claude" class="btn subtle" disabled title="設定タブでAPIキーを入力すると使えます">Claudeで高精度解析</button>
+        </div>
+      </div>
+
+      <details class="card" id="manual-edit">
+        <summary><h2>手動で微調整</h2></summary>
+        <div class="form-grid">
+          <label>柄
+            <select id="f-pattern">
+              <option value="solid">単色（白ぶち含む）</option>
+              <option value="tabby">トラ（縞）</option>
+              <option value="spotted">斑点</option>
+              <option value="tortie">サビ・三毛</option>
+              <option value="colorpoint">ポインテッド（シャム系）</option>
+            </select>
+          </label>
+          <label>地の色 <input type="color" id="f-baseColor" /></label>
+          <label>柄の色 <input type="color" id="f-secondaryColor" /></label>
+          <label>お腹の色 <input type="color" id="f-bellyColor" /></label>
+          <label>目の色 <input type="color" id="f-eyeColor" /></label>
+          <label>鼻の色 <input type="color" id="f-noseColor" /></label>
+          <label>白の量 <input type="range" id="f-whiteAmount" min="0" max="1" step="0.01" /></label>
+          <label>顔の白 <input type="range" id="f-whiteFace" min="0" max="1" step="0.01" /></label>
+          <label>柄の細かさ <input type="range" id="f-patternScale" min="0.5" max="2" step="0.01" /></label>
+          <label>柄の濃さ <input type="range" id="f-patternContrast" min="0" max="1" step="0.01" /></label>
+          <label>毛の長さ <input type="range" id="f-furLength" min="0" max="1" step="0.01" /></label>
+          <label>ぽっちゃり <input type="range" id="f-chubby" min="0" max="1" step="0.01" /></label>
+          <label>耳の大きさ <input type="range" id="f-earSize" min="0.7" max="1.4" step="0.01" /></label>
+          <label>しっぽの長さ <input type="range" id="f-tailLength" min="0.4" max="1.3" step="0.01" /></label>
+          <label>脚の長さ <input type="range" id="f-legLength" min="0.8" max="1.2" step="0.01" /></label>
+        </div>
+        <div class="row">
+          <button id="btn-reset-look" class="btn subtle">見た目をリセット</button>
+        </div>
+      </details>
+    </section>
+
+    <!-- 鳴き声 -->
+    <section class="panel" id="tab-voice">
+      <div class="card">
+        <h2>動画・音声から鳴き声を学習</h2>
+        <p class="hint">猫が鳴いている動画（または音声）を選ぶと、鳴き声の区間を自動で切り出して、その子の声として使います。</p>
+        <div class="row">
+          <label class="btn file">動画・音声を選ぶ<input id="in-voice" type="file" accept="video/*,audio/*" hidden /></label>
+          <label class="check"><input type="checkbox" id="chk-voice-look" checked /> 動画なら見た目も学習する</label>
+        </div>
+        <div id="voice-progress" class="progress" hidden><div class="bar"></div><span class="label"></span></div>
+        <div id="voice-summary" class="hint"></div>
+        <ul id="clip-list" class="clip-list"></ul>
+      </div>
+      <div class="card">
+        <h2>鳴かせてみる</h2>
+        <div class="row">
+          <button class="btn" data-say="meow">にゃー</button>
+          <button class="btn" data-say="trill">くるる</button>
+          <button class="btn" data-say="purr">ゴロゴロ</button>
+          <button class="btn" data-say="hiss">シャー</button>
+        </div>
+        <p class="hint">切り出した声がない種類は、学習した声の高さで合成した声で鳴きます。</p>
+      </div>
+    </section>
+
+    <!-- 設定 -->
+    <section class="panel" id="tab-settings">
+      <div class="card">
+        <h2>AR設定</h2>
+        <div class="form-grid">
+          <label>猫の大きさ <input type="range" id="s-scale" min="0.5" max="1.5" step="0.01" /></label>
+          <label class="check"><input type="checkbox" id="s-sound" /> 鳴き声を出す</label>
+          <label class="check"><input type="checkbox" id="s-surfaces" /> 認識した面を点で表示</label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Claude API（任意）</h2>
+        <p class="hint">入力すると「Claudeで高精度解析」が使えます。写真が Anthropic のAPIに送信されます。キーはこの端末のブラウザ内にのみ保存されます。</p>
+        <input id="s-apikey" type="password" class="text" placeholder="sk-ant-..." autocomplete="off" />
+        <label class="check"><input type="checkbox" id="s-savekey" /> この端末に保存する</label>
+      </div>
+      <div class="card">
+        <h2>データ</h2>
+        <button id="btn-clear" class="btn danger">学習データをすべて消去</button>
+      </div>
+      <p class="note center">NekoAR · WebXR / Three.js / MediaPipe</p>
+    </section>
+  </main>
+
+  <!-- ===== 体験画面（AR / デモ共通のオーバーレイ） ===== -->
+  <div id="experience" class="screen experience">
+    <div id="exp-host" class="exp-host"></div>
+    <div id="overlay" class="overlay">
+      <div class="hud-top">
+        <button id="btn-exit" class="btn round" aria-label="終了">✕</button>
+        <div id="status" class="status">準備中…</div>
+      </div>
+      <div id="toast" class="toast" hidden></div>
+      <div class="hud-bottom">
+        <button id="btn-call" class="btn pill">呼ぶ</button>
+        <button id="btn-surfaces" class="btn pill">面を表示</button>
+        <button id="btn-scan" class="btn pill" hidden>部屋を全部スキャン</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
